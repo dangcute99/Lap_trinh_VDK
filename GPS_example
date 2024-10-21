@@ -1,0 +1,411 @@
+/*****************************************************
+This program was produced by the
+CodeWizardAVR V1.24.2c Standard
+Automatic Program Generator
+� Copyright 1998-2004 Pavel Haiduc, HP InfoTech s.r.l.
+http://www.hpinfotech.ro
+e-mail:office@hpinfotech.ro
+
+Project : 
+Version : 
+Date    : 3/28/2011
+Author  : tho                             
+Company :                                 
+Comments: 
+
+
+Chip type           : ATmega128
+Program type        : Application
+Clock frequency     : 8.000000 MHz
+Memory model        : Small
+External SRAM size  : 0
+Data Stack size     : 1024
+*****************************************************/
+
+#include <mega128.h>
+#include <delay.h>
+// Alphanumeric LCD Module functions
+#asm
+   .equ __lcd_port=0x18 ;PORTB
+#endasm
+#include <lcd.h>
+char vd[9]="",vp[9]="",kd[9]="",kp[9]="",td[6]="",tg[12]="",date[6]="";
+signed char stt=0; 
+void hienthi();
+#define RXB8 1
+#define TXB8 0
+#define UPE 2
+#define OVR 3
+#define FE 4
+#define UDRE 5
+#define RXC 7
+
+#define FRAMING_ERROR (1<<FE)
+#define PARITY_ERROR (1<<UPE)
+#define DATA_OVERRUN (1<<OVR)
+#define DATA_REGISTER_EMPTY (1<<UDRE)
+#define RX_COMPLETE (1<<RXC)
+
+// USART0 Receiver buffer
+#define RX_BUFFER_SIZE0 8
+char rx_buffer0[RX_BUFFER_SIZE0];
+
+#if RX_BUFFER_SIZE0<256
+unsigned char rx_wr_index0,rx_rd_index0,rx_counter0;
+#else
+unsigned int rx_wr_index0,rx_rd_index0,rx_counter0;
+#endif
+
+// This flag is set on USART0 Receiver buffer overflow
+bit rx_buffer_overflow0;
+
+// USART0 Receiver interrupt service routine
+interrupt [USART0_RXC] void usart0_rx_isr(void)
+{
+char status,ch;
+status=UCSR0A;
+ch=UDR0;
+stt++;
+if ((status & (FRAMING_ERROR | PARITY_ERROR | DATA_OVERRUN))==0)
+   	{
+         switch (stt)
+           {
+        //$GPRMC,111959.000,A,2102.9683,N,10547.1455,E,4.87,62.89,110609,,,A*5C
+            case 1: if (ch !='$') stt=0 ; break;
+            case 2: if (ch !='G') stt=0 ; break;
+            case 3: if (ch !='P') stt=0 ; break;
+            case 4: if (ch !='R') stt=0 ; break;               
+            case 5: if (ch !='M') stt=0 ; break;
+            case 6: if (ch !='C') stt=0 ; break;
+            case 7: if (ch !=',') stt=0 ; break;
+            /*thu 10 byte Timer*/
+            case 8:  if (ch<'0' || ch>'9') stt=0; else tg[0]=ch;  break;
+            case 9:  if (ch<'0' || ch>'9') stt=0; else tg[1]=ch;  break;
+            case 10: if (ch<'0' || ch>'9') stt=0; else tg[2]=ch;  break;
+            case 11: if (ch<'0' || ch>'9') stt=0; else tg[3]=ch;  break;
+            case 12: if (ch<'0' || ch>'9') stt=0; else tg[4]=ch;  break;
+            case 13: if (ch<'0' || ch>'9') stt=0; else tg[5]=ch;  break;
+            case 14: if (ch!='.')          stt=0; else tg[6]=ch;  break;
+            case 15: if (ch<'0' || ch>'9') stt=0; else tg[7]=ch;  break;
+            case 16: if (ch<'0' || ch>'9') stt=0; else tg[8]=ch;  break;
+            case 17: if (ch<'0' || ch>'9') stt=0; else tg[9]=ch;  break;                     
+            
+            case 18: if (ch !=',')         stt=0;                 break;
+            case 19: if (ch!='A')         stt=0 ;                break;
+            case 20: if (ch !=',')         stt=0;                 break;                                                                                                                             
+            /*thu 9 byte vi do*/
+            //2 byte do
+            case 21: if (ch<'0' || ch>'9') stt=0 ; else vd[0]=ch;  break; 
+            case 22: if (ch<'0' || ch>'9') stt=0 ; else vd[1]=ch;  break;
+            //7 byte phut
+            case 23: if (ch<'0' || ch>'9') stt=0 ; else vp[0]=ch;  break; 
+            case 24: if (ch<'0' || ch>'9') stt=0 ; else vp[1]=ch;  break;
+            case 25: if (ch!='.')          stt=0 ; else vp[2]=ch;  break;            
+            case 26: if (ch<'0' || ch>'9') stt=0 ; else vp[3]=ch;  break; 
+            case 27: if (ch<'0' || ch>'9') stt=0 ; else vp[4]=ch;  break;
+            case 28: if (ch<'0' || ch>'9') stt=0 ; else vp[5]=ch;  break; 
+            case 29: if (ch<'0' || ch>'9') stt=0 ; else vp[6]=ch;  break;
+            // thu 3 byte ",N,"
+            case 30: if (ch !=',')         stt=0;                 break;
+            case 31: if ((ch!='N')&&(ch!='S'))  stt=0 ; break;
+            case 32: if (ch !=',')         stt=0;                 break;
+            /*thu 10 byte kinh do*/
+            //3 byte do
+            case 33: if (ch<'0' || ch>'9') stt=0 ; else kd[0]=ch;  break; 
+            case 34: if (ch<'0' || ch>'9') stt=0 ; else kd[1]=ch;  break;
+            case 35: if (ch<'0' || ch>'9') stt=0 ; else kd[2]=ch;  break;
+            //7 byte phut
+            case 36: if (ch<'0' || ch>'9') stt=0 ; else kp[0]=ch;  break; 
+            case 37: if (ch<'0' || ch>'9') stt=0 ; else kp[1]=ch;  break;
+            case 38: if (ch!='.')          stt=0 ; else kp[2]=ch;  break;            
+            case 39: if (ch<'0' || ch>'9') stt=0 ; else kp[3]=ch;  break; 
+            case 40: if (ch<'0' || ch>'9') stt=0 ; else kp[4]=ch;  break;
+            case 41: if (ch<'0' || ch>'9') stt=0 ; else kp[5]=ch;  break; 
+            case 42: if (ch<'0' || ch>'9') stt=0 ; else kp[6]=ch;  break;
+            
+            //$GPRMC,111959.000,A,2102.9683,N,10547.1455,E,4.87,642.89,110609,,,A*5C
+            // thu 3 byte ",N,"
+            case 43: if (ch !=',')         stt=0;                 break;
+            case 44: if ((ch!='W')&&(ch!='E'))  stt=0 ; break;
+            case 45: if (ch !=',')         stt=0;                 break;
+            /* thu cac byte do toc do */
+            case 46: { if (ch==',') stt=51; else td[0]=ch;} break;
+            case 47: { if (ch==',') stt=51; else td[1]=ch;} break;
+            case 48: { if (ch==',') stt=51; else td[2]=ch;} break;
+            case 49: { if (ch==',') stt=51; else td[3]=ch;} break;
+            case 50: { if (ch==',') stt=51; else td[4]=ch;} break;                    
+           
+            case 52: if (ch==',') stt=58; break;
+            case 53: if (ch==',') stt=58; break;
+            case 54: if (ch==',') stt=58; break;             
+            case 55: if (ch==',') stt=58; break;
+            case 56: if (ch==',') stt=58; break;
+            case 57: if (ch==',') stt=58; break;  
+            case 58: if (ch==',') stt=58; break;     
+                           
+            /* bo qua 8 byte huong chuyen dong ",xxx.xx," */
+            
+            case 59: date[0]=ch; break;
+            case 60: date[1]=ch; break;
+            case 61: date[2]=ch; break;
+            case 62: date[3]=ch; break;             
+            case 63: date[4]=ch; break;
+            case 64: date[5]=ch; break;
+            case 65: { stt=0 ; hienthi();} break;
+   	};
+   };
+}
+///////////////////////////////////////
+void hienthi(void)
+{
+	lcd_clear();
+	delay_ms(10); 
+	lcd_gotoxy(0,0);lcd_putsf("Time:     :  :  ");
+	lcd_gotoxy(0,1);lcd_putsf("Date:     :  :  "); 
+	lcd_gotoxy(8,0); lcd_putchar(tg[0]);   lcd_putchar(tg[1]); 
+     	lcd_gotoxy(11,0);lcd_putchar(tg[2]);   lcd_putchar(tg[3]);
+      	lcd_gotoxy(14,0);lcd_putchar(tg[4]);   lcd_putchar(tg[5]);
+      	lcd_gotoxy(8,1); lcd_putchar(date[0]);   lcd_putchar(date[1]); 
+     	lcd_gotoxy(11,1);lcd_putchar(date[2]);  lcd_putchar(date[3]);
+     	lcd_gotoxy(14,1);lcd_putchar(date[4]);   lcd_putchar(date[5]);
+}
+
+#ifndef _DEBUG_TERMINAL_IO_
+// Get a character from the USART0 Receiver buffer
+#define _ALTERNATE_GETCHAR_
+#pragma used+
+char getchar(void)
+{
+char data;
+while (rx_counter0==0);
+data=rx_buffer0[rx_rd_index0];
+if (++rx_rd_index0 == RX_BUFFER_SIZE0) rx_rd_index0=0;
+#asm("cli")
+--rx_counter0;
+#asm("sei")
+return data;
+}
+#pragma used-
+#endif
+
+// USART1 Receiver buffer
+#define RX_BUFFER_SIZE1 8
+char rx_buffer1[RX_BUFFER_SIZE1];
+
+#if RX_BUFFER_SIZE1<256
+unsigned char rx_wr_index1,rx_rd_index1,rx_counter1;
+#else
+unsigned int rx_wr_index1,rx_rd_index1,rx_counter1;
+#endif
+
+// This flag is set on USART1 Receiver buffer overflow
+bit rx_buffer_overflow1;
+
+// USART1 Receiver interrupt service routine
+interrupt [USART1_RXC] void usart1_rx_isr(void)
+{
+char status,data;
+status=UCSR1A;
+data=UDR1;
+if ((status & (FRAMING_ERROR | PARITY_ERROR | DATA_OVERRUN))==0)
+   {
+   rx_buffer1[rx_wr_index1]=data;
+   if (++rx_wr_index1 == RX_BUFFER_SIZE1) rx_wr_index1=0;
+   if (++rx_counter1 == RX_BUFFER_SIZE1)
+      {
+      rx_counter1=0;
+      rx_buffer_overflow1=1;
+      };
+   };
+}
+
+// Get a character from the USART1 Receiver buffer
+#pragma used+
+char getchar1(void)
+{
+char data;
+while (rx_counter1==0);
+data=rx_buffer1[rx_rd_index1];
+if (++rx_rd_index1 == RX_BUFFER_SIZE1) rx_rd_index1=0;
+#asm("cli")
+--rx_counter1;
+#asm("sei")
+return data;
+}
+#pragma used-
+// USART1 Transmitter buffer
+#define TX_BUFFER_SIZE1 8
+char tx_buffer1[TX_BUFFER_SIZE1];
+
+#if TX_BUFFER_SIZE1<256
+unsigned char tx_wr_index1,tx_rd_index1,tx_counter1;
+#else
+unsigned int tx_wr_index1,tx_rd_index1,tx_counter1;
+#endif
+
+// USART1 Transmitter interrupt service routine
+interrupt [USART1_TXC] void usart1_tx_isr(void)
+{
+if (tx_counter1)
+   {
+   --tx_counter1;
+   UDR1=tx_buffer1[tx_rd_index1];
+   if (++tx_rd_index1 == TX_BUFFER_SIZE1) tx_rd_index1=0;
+   };
+}
+
+// Write a character to the USART1 Transmitter buffer
+#pragma used+
+void putchar1(char c)
+{
+while (tx_counter1 == TX_BUFFER_SIZE1);
+#asm("cli")
+if (tx_counter1 || ((UCSR1A & DATA_REGISTER_EMPTY)==0))
+   {
+   tx_buffer1[tx_wr_index1]=c;
+   if (++tx_wr_index1 == TX_BUFFER_SIZE1) tx_wr_index1=0;
+   ++tx_counter1;
+   }
+else
+   UDR1=c;
+#asm("sei")
+}
+#pragma used-
+
+// Standard Input/Output functions
+#include <stdio.h>
+
+// Timer 0 overflow interrupt service routine
+interrupt [TIM0_OVF] void timer0_ovf_isr(void)
+{
+// Reinitialize Timer 0 value
+TCNT0=0xD8;
+// Place your code here
+
+}
+
+// Timer 1 overflow interrupt service routine
+interrupt [TIM1_OVF] void timer1_ovf_isr(void)
+{
+// Reinitialize Timer 1 value
+TCNT1H=0xD8;
+TCNT1L=0xF0;
+// Place your code here
+
+}
+
+// Declare your global variables here
+
+void main(void)
+{
+
+PORTA=0x00;
+DDRA=0x00;
+
+PORTB=0x00;
+DDRB=0x00;
+ 
+PORTC=0x00;
+DDRC=0x00;
+ 
+PORTD=0x00;
+DDRD=0x00;
+ 
+PORTE=0x00;
+DDRE=0x68;
+
+PORTF=0x00;
+DDRF=0x00;
+
+PORTG=0x00;
+DDRG=0x00;
+
+ASSR=0x00;
+TCCR0=0x07;
+TCNT0=0xD8;
+OCR0=0x00;
+
+TCCR1A=0x00;
+TCCR1B=0x05;
+TCNT1H=0xD8;
+TCNT1L=0xF0;
+ICR1H=0x00;
+ICR1L=0x00;
+OCR1AH=0x00;
+OCR1AL=0x00;
+OCR1BH=0x00;
+OCR1BL=0x00;
+OCR1CH=0x00;
+OCR1CL=0x00;
+
+TCCR2=0x00;
+TCNT2=0x00;
+OCR2=0x00;
+
+TCCR3A=0x00;
+TCCR3B=0x00;
+TCNT3H=0x00;
+TCNT3L=0x00;
+ICR3H=0x00;
+ICR3L=0x00;
+OCR3AH=0x00;
+OCR3AL=0x00;
+OCR3BH=0x00;
+OCR3BL=0x00;
+OCR3CH=0x00;
+OCR3CL=0x00;
+
+EICRA=0x00;
+EICRB=0x00;
+EIMSK=0x00;
+
+// Timer(s)/Counter(s) Interrupt(s) initialization
+TIMSK=0x05;
+ETIMSK=0x00;
+
+// USART0 initialization
+// Communication Parameters: 8 Data, 1 Stop, No Parity
+// USART0 Receiver: On
+// USART0 Transmitter: Onputchar1(char c)
+// USART0 Mode: Asynchronous
+// USART0 Baud rate: 4800
+UCSR0A=0x00;
+UCSR0B=0x98;
+UCSR0C=0x06;
+UBRR0H=0x00;
+UBRR0L=0x67;
+
+// USART1 initialization
+// Communication Parameters: 8 Data, 1 Stop, No Parity
+// USART1 Receiver: On
+// USART1 Transmitter: On
+// USART1 Mode: Asynchronous
+// USART1 Baud rate: 9600
+UCSR1A=0x00;
+UCSR1B=0xD8;
+UCSR1C=0x06;
+UBRR1H=0x00;
+UBRR1L=0x33;
+
+// Analog Comparator initialization
+// Analog Comparator: Off
+// Analog Comparator Input Capture by Timer/Counter 1: Off
+// Analog Comparator Output: Off
+ACSR=0x80;
+SFIOR=0x00;
+
+// LCD module initialization
+lcd_init(16);
+
+// Global enable interrupts
+#asm("sei")
+putchar1('a');
+while (1)
+      {
+      PORTE.3=0;  // ph�n k�nh lua chon GPS1
+      PORTE.5=0;
+      PORTE.6=1;// ro le lua chon GPS1 
+      PORTE.2=1;
+
+      };
+}
